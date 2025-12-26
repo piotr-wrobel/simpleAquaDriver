@@ -139,3 +139,35 @@ int main(void)
 	}
 }
 
+uint16_t ADC_run(void)
+{
+	//PORT |= (1<<PHOTOTRANSISTOR); //Zasilanie na fototranzystor przez R podciagajacy na porcie
+	ADCSRA |= (1<<ADEN); //Wlaczenie przetwornika AD
+	ADCSRA |= (1<<ADPS1) | (1<<ADPS0); //Preskaler 8 dla przetwornika AD (przy 0.5MHz clk)
+	ADMUX = (1<<MUX1); // Vcc as Vref and connect ADC2(PB4)
+	ADCSRA |= (1<<ADSC); // Convert
+	_delay_ms(1);
+	while (ADCSRA & (1<<ADSC));
+	uint8_t low = ADCL;
+	uint16_t val = ((ADCH&0x03) << 8) | low;
+	//discard previous result
+	ADCSRA |= (1<<ADSC); // Convert
+	while (ADCSRA & (1<<ADSC));
+	low = ADCL;
+	val = ((ADCH&0x03) << 8) | low;
+	_delay_ms(1);
+	ADCSRA |= (1<<ADSC); // Convert
+	while (ADCSRA & (1<<ADSC));
+	low = ADCL;
+	val += ((ADCH&0x03) << 8) | low;
+	_delay_ms(1);
+	ADCSRA |= (1<<ADSC); // Convert
+	while (ADCSRA & (1<<ADSC));
+	low = ADCL;
+	val += ((ADCH&0x03) << 8) | low;
+
+	ADCSRA &= ~(1<<ADEN); //Wylaczenie przetwornika AD
+	//PORT &= ~(1<<PHOTOTRANSISTOR); //Odlaczamy fototranzystor
+	return val/3;
+}
+
