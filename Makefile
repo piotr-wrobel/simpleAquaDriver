@@ -80,7 +80,7 @@ OBJDIR = .
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = $(TARGET).c
+SRC = main.c
 
 
 # List C++ source files here. (C dependencies are automatically generated.)
@@ -268,7 +268,6 @@ LDFLAGS += $(PRINTF_LIB) $(SCANF_LIB) $(MATH_LIB)
 
 
 #---------------- Programming Options (avrdude) ----------------
-
 # Programming hardware
 # Type: avrdude -c ?
 # to get a full listing.

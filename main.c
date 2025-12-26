@@ -1,6 +1,6 @@
 
-//********* UWAGA !! Na fabrycznym procku nale¿y zdj¹æ FUSEBIT CKDIV8 
-// i ustawiæ Fast Rising Power - bity SUT[1:0] na 01  ***********
+//********* UWAGA !! Na fabrycznym procku nalezy zdjac FUSEBIT CKDIV8 
+// i ustawic Fast Rising Power - bity SUT[1:0] na 01  ***********
 
 
 #include <avr/eeprom.h>
@@ -49,17 +49,17 @@ uint8_t czekaj(uint8_t naco)
 int main(void)
 {
     
-	// next four instructions. // Niepotrzebne, wy³¹czony fuse bit CKDIV8
+	// next four instructions. // Niepotrzebne, wylaczony fuse bit CKDIV8
     //CLKPR=(1<<CLKPCE); 
     //CLKPR=0; // 8 MHZ
 	
 	
 	//########### I/O ###########
 	//Ustawienie pinów
-    DDRB  |= (1<<WY); // jako wyjœcia
+    DDRB  |= (1<<WY); // jako wyjscia
     PORTB |=  (1<<WY); //Stan wysoki, wygaszenie lampki
-	DDRB  &=~ (1<<WE); //Ustawienie pinów klawiszy jako wejœcie 
-    PORTB |=  (1<<WE); //w³¹czenie rezystora podci¹gaj¹cego tzw. Pull_up
+	DDRB  &=~ (1<<WE); //Ustawienie pinów klawiszy jako wejscie 
+    PORTB |=  (1<<WE); //wlaczenie rezystora podciagajacego tzw. Pull_up
 
     //############# PWM Fast #############
 	TCCR0A |= (1<<COM0A0) | (1<<COM0A1) | (1<<WGM00) | (1<<WGM01); //Fast PWM, set OC0A on compare match, clear at BOTTOM
@@ -78,9 +78,9 @@ int main(void)
 	}
 	OCR0A=wypelnienie;
 
-	while(1) //Pêtla g³ówna
+	while(1) //Petla glówna
 	{
-		if(!(PINB & (1<<WE)))//jeœli klawisz jest wduszony
+		if(!(PINB & (1<<WE)))//jesli klawisz jest wduszony
 		{
 			_delay_ms(50); // Czekamy chwilke
 			if(!(PINB & (1<<WE))) // Nadal wduszony
