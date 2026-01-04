@@ -82,7 +82,7 @@ int main(void)
 
     ////############# PWM Fast #############
 	TCCR0A |= (1<<COM0A0) | (1<<COM0A1) | (1<<WGM00) | (1<<WGM01); //Fast PWM, set OC0A on compare match, clear at BOTTOM
-	TCCR0B |= (1<<CS01); // Internal clock, prescaler 64 f= CPU clock / 8 * 256  (9,6MHz/8*256=4,6kHz)
+	TCCR0B |= ((1<<CS01) | (1<<CS00)); // Internal clock, prescaler 64 f= CPU clock / 256 / 64  (8MHz/256/64=488Hz)
 	
 	OCR0A = WYP_MIN; // Na poczatek wypelnienie min, lampka przyciemniona
 	uint8_t wypelnienie=0,tmp=0;
