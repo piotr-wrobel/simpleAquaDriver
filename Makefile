@@ -41,7 +41,7 @@
 
 
 # MCU name
-MCU = attiny13
+MCU = atmega328p
 
 
 # Processor frequency.
@@ -62,7 +62,7 @@ MCU = attiny13
 #         F_CPU = 16000000
 #         F_CPU = 18432000
 #         F_CPU = 20000000
-F_CPU = 9600000
+F_CPU = 8000000
 
 
 # Output format. (can be srec, ihex, binary)
@@ -80,7 +80,7 @@ OBJDIR = .
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = main.c
+SRC = main.c uart/uart.c
 
 
 # List C++ source files here. (C dependencies are automatically generated.)
@@ -272,10 +272,10 @@ LDFLAGS += $(PRINTF_LIB) $(SCANF_LIB) $(MATH_LIB)
 # Type: avrdude -c ?
 # to get a full listing.
 #
-AVRDUDE_PROGRAMMER = stk200
+AVRDUDE_PROGRAMMER = avrisp2
 
 # com1 = serial port. Use lpt1 to connect to parallel port.
-AVRDUDE_PORT = lpt1
+AVRDUDE_PORT = usb
 
 AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET).hex
 #AVRDUDE_WRITE_EEPROM = -U eeprom:w:$(TARGET).eep
