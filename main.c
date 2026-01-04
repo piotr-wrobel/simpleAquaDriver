@@ -87,15 +87,15 @@ int main(void)
 	OCR0A = WYP_MIN; // Na poczatek wypelnienie min, lampka przyciemniona
 	uint8_t wypelnienie=0,tmp=0;
 	
-	//eeprom_busy_wait();
-	//__EEGET(wypelnienie,0); //Wczytujemy z pamieci zapisane wypelnienie
+	eeprom_busy_wait();
+	__EEGET(wypelnienie,0); //Wczytujemy z pamieci zapisane wypelnienie
 	
-	//for(tmp=WYP_MIN;tmp<wypelnienie;tmp+=KROK) // Plynnie rozjasniamy do osiagniecia zapisanego w eeprom
-	//{
-		//OCR0A=tmp;
-		//_delay_ms(OPOZNIENIE);
-	//}
-	//OCR0A=wypelnienie;
+	for(tmp=WYP_MIN;tmp<wypelnienie;tmp+=KROK) // Plynnie rozjasniamy do osiagniecia zapisanego w eeprom
+	{
+		OCR0A=tmp;
+		_delay_ms(OPOZNIENIE);
+	}
+	OCR0A=wypelnienie;
 
 	while(1) //Petla glówna
 	{
@@ -123,15 +123,15 @@ int main(void)
 							
 						OCR0A=wypelnienie;
 					}
-					//eeprom_busy_wait();
-					//__EEGET(tmp,0); // Wczytujemy poprzednie ustawienie z EEPROM
-					//if(tmp!=wypelnienie) // Jesli sie zmienilo, to zapisujemy nowe ustawienie
-					//{
-						//OCR0A=0; //Migniemy na potwierdzenie zapisu :)
-						//eeprom_busy_wait();
-						//__EEPUT(0,wypelnienie);
-						//_delay_ms(300);
-					//}
+					eeprom_busy_wait();
+					__EEGET(tmp,0); // Wczytujemy poprzednie ustawienie z EEPROM
+					if(tmp!=wypelnienie) // Jesli sie zmienilo, to zapisujemy nowe ustawienie
+					{
+						OCR0A=0; //Migniemy na potwierdzenie zapisu :)
+						eeprom_busy_wait();
+						__EEPUT(0,wypelnienie);
+						_delay_ms(300);
+					}
 					OCR0A=wypelnienie;	
 				}else //Nie bylo zwolnienia klawisza, czyli rozjasniamy
 				{
@@ -146,15 +146,15 @@ int main(void)
 						}
 						OCR0A=wypelnienie;
 					}
-					//eeprom_busy_wait();
-					//__EEGET(tmp,0); // Wczytujemy poprzednie ustawienie z EEPROM
-					//if(tmp!=wypelnienie) // Jesli sie zmienilo, to zapisujemy nowe ustawienie
-					//{
-						//OCR0A=0; //Migniemy na potwierdzenie zapisu :)
-						//eeprom_busy_wait();
-						//__EEPUT(0,wypelnienie);
-						//_delay_ms(300);
-					//}
+					eeprom_busy_wait();
+					__EEGET(tmp,0); // Wczytujemy poprzednie ustawienie z EEPROM
+					if(tmp!=wypelnienie) // Jesli sie zmienilo, to zapisujemy nowe ustawienie
+					{
+						OCR0A=0; //Migniemy na potwierdzenie zapisu :)
+						eeprom_busy_wait();
+						__EEPUT(0,wypelnienie);
+						_delay_ms(300);
+					}
 					OCR0A=wypelnienie;
 				}
 			}
