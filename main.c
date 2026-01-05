@@ -34,7 +34,9 @@ uint8_t switch_mode = 0;
 
 
 uint8_t czekaj(uint8_t naco);
+#ifdef UART_DEBUG
 static void UARTuitoa(uint16_t liczba, char *string);
+#endif
 uint16_t ADC_run(void);
 
 
@@ -61,7 +63,7 @@ int main(void)
 	TCCR0B |= ((1<<CS01) | (1<<CS00)); // Internal clock, prescaler 64 f= CPU clock / 256 / 64  (8MHz/256/64=488Hz)
 	
 
- #ifdef UART_DEBUG
+#ifdef UART_DEBUG
 	uart0_init(UART_BAUD_SELECT(BAUD0,F_CPU));
 	uart0_puts("\n\r");
 	uart0_puts("Start\n\r");
@@ -91,9 +93,13 @@ int main(void)
 		//WY_PORT ^= (1 << WY);
 		if(switch_mode)
 		{
+			
 			if(!(SWITCH_PIN & (1<<SWITCH)))//jesli klawisz jest wduszony
 			{
+			#ifdef UART_DEBUG
 				uart0_puts("PUSHED\n\r");
+			#endif 
+
 				_delay_ms(50); // Czekamy chwilke
 				if(!(SWITCH_PIN & (1<<SWITCH))) // Nadal wduszony
 				{
@@ -154,16 +160,20 @@ int main(void)
 			adc_result = ADC_run();
 			if( adc_result != adc_result_prev)
 			{
+			#ifdef UART_DEBUG
 				UARTuitoa(adc_result, napis);
 				uart0_puts("pomiar:");
 				uart0_puts(napis);
+			#endif
 				adc_result_prev = adc_result;
 				wypelnienie2 = adc_result / 4;
 				adc_result = wypelnienie2;
+			#ifdef UART_DEBUG
 				UARTuitoa(adc_result, napis);
 				uart0_puts(":");
 				uart0_puts(napis);
 				uart0_puts("\n\r");
+			#endif
 				OCR0A=wypelnienie2;
 			}			
 		}
@@ -197,6 +207,7 @@ uint8_t czekaj(uint8_t naco)
 	return 0;
 }
 
+#ifdef UART_DEBUG
 static void UARTuitoa(uint16_t liczba, char *string)
 {
 	uint8_t nibble=0,pozycja;
@@ -212,6 +223,7 @@ static void UARTuitoa(uint16_t liczba, char *string)
 	}
 	string[pozycja]=0;
 }
+#endif
 
 uint16_t ADC_run(void)
 {
