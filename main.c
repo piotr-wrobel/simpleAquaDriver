@@ -43,7 +43,8 @@ uint16_t ADC_run(void);
 int main(void)
 {
   
-	uint16_t adc_result = 0,adc_result_prev = 0;
+	uint16_t adc_result = 0;
+	uint8_t wypelnienie=0, tmp=0, adc_result8=0,adc_result8_prev = 0;
 	// next four instructions. // Niepotrzebne, wylaczony fuse bit CKDIV8
     //CLKPR=(1<<CLKPCE); 
     //CLKPR=0; // 8 MHZ
@@ -69,8 +70,6 @@ int main(void)
 	uart0_puts("Start...\n\r");
 #endif 
 
-	uint8_t wypelnienie=0, tmp=0, wypelnienie2=0;
-	
 	
 	if(!(SWITCH_PIN & (1<<SWITCH)))
 	{
@@ -176,23 +175,31 @@ int main(void)
 		} else
 		{
 			adc_result = ADC_run();
-			if( adc_result != adc_result_prev)
+			adc_result8 = adc_result / 4;
+			if( adc_result8 != adc_result8_prev )
 			{
 			#ifdef UART_DEBUG
 				UARTuitoa(adc_result, napis);
 				uart0_puts("pomiar:");
 				uart0_puts(napis);
-			#endif
-				adc_result_prev = adc_result;
-				wypelnienie2 = adc_result / 4;
-				adc_result = wypelnienie2;
-			#ifdef UART_DEBUG
-				UARTuitoa(adc_result, napis);
+				
+				UARTuitoa((uint16_t)adc_result8, napis);
 				uart0_puts(":");
 				uart0_puts(napis);
 				uart0_puts("\n\r");
 			#endif
-				OCR0A=wypelnienie2;
+				while(adc_result8 > adc_result8_prev)
+				{
+					adc_result8_prev += KROK;
+					OCR0A=adc_result8_prev;
+					_delay_ms(8);
+				}
+				while(adc_result8 < adc_result8_prev)
+				{
+					adc_result8_prev -= KROK;
+					OCR0A=adc_result8_prev;
+					_delay_ms(8);
+				}
 			}			
 		}
 	}
