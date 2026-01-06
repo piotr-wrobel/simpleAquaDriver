@@ -66,7 +66,7 @@ int main(void)
 #ifdef UART_DEBUG
 	uart0_init(UART_BAUD_SELECT(BAUD0,F_CPU));
 	uart0_puts("\n\r");
-	uart0_puts("Start\n\r");
+	uart0_puts("Start...\n\r");
 #endif 
 
 	uint8_t wypelnienie=0, tmp=0, wypelnienie2=0;
@@ -75,16 +75,28 @@ int main(void)
 	if(!(SWITCH_PIN & (1<<SWITCH)))
 	{
 		switch_mode = 1;
-		
+	#ifdef UART_DEBUG
+		uart0_puts("Tryb przycisku\n\r");
+	#endif
 		eeprom_busy_wait();
 		__EEGET(wypelnienie,0); //Wczytujemy z pamieci zapisane wypelnienie
-		
+	#ifdef UART_DEBUG
+		UARTuitoa((uint16_t)wypelnienie, napis);
+		uart0_puts("odczyt z eeprom:");
+		uart0_puts(napis);
+		uart0_puts("\n\r");
+	#endif
 		for(tmp=WYP_MIN;tmp<wypelnienie;tmp+=KROK) // Plynnie rozjasniamy do osiagniecia zapisanego w eeprom
 		{
 			OCR0A=tmp;
 			_delay_ms(OPOZNIENIE);
 		}
 		OCR0A=wypelnienie;
+	} else
+	{
+	#ifdef UART_DEBUG
+		uart0_puts("Tryb potencjometru\n\r");
+	#endif
 	}
 
 	while(1) //Petla glówna
@@ -97,7 +109,7 @@ int main(void)
 			if(!(SWITCH_PIN & (1<<SWITCH)))//jesli klawisz jest wduszony
 			{
 			#ifdef UART_DEBUG
-				uart0_puts("PUSHED\n\r");
+				uart0_puts("wcisniety...\n\r");
 			#endif 
 
 				_delay_ms(50); // Czekamy chwilke
@@ -127,6 +139,12 @@ int main(void)
 							eeprom_busy_wait();
 							__EEPUT(0,wypelnienie);
 							_delay_ms(300);
+						#ifdef UART_DEBUG
+							UARTuitoa((uint16_t)wypelnienie, napis);
+							uart0_puts("zapis do eeprom:");
+							uart0_puts(napis);
+							uart0_puts("\n\r");
+						#endif
 						}
 						OCR0A=wypelnienie;	
 					}else //Nie bylo zwolnienia klawisza, czyli rozjasniamy
