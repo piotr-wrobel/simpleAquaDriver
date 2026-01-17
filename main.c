@@ -22,6 +22,7 @@
 #define WY PD6
 #define WY_DDR DDRD
 #define WY_PORT PORTD
+#define OCR OCR0A
 
 #define SWITCH PC5
 #define SWITCH_DDR DDRC
@@ -52,7 +53,7 @@ int main(void)
 	
 	//########### I/O ###########
 	//Ustawienie pinów
-    OCR0A = WYP_MIN; // Na poczatek wypelnienie min, lampka przyciemniona
+    OCR = WYP_MIN; // Na poczatek wypelnienie min, lampka przyciemniona
     
     WY_DDR  |= (1<<WY); // jako wyjscia
     WY_PORT |=  (1<<WY); //Stan wysoki, wygaszenie lampki
@@ -87,10 +88,10 @@ int main(void)
 	#endif
 		for(tmp=WYP_MIN;tmp<wypelnienie;tmp+=KROK) // Plynnie rozjasniamy do osiagniecia zapisanego w eeprom
 		{
-			OCR0A=tmp;
+			OCR=tmp;
 			_delay_ms(OPOZNIENIE);
 		}
-		OCR0A=wypelnienie;
+		OCR=wypelnienie;
 	} else
 	{
 	#ifdef UART_DEBUG
@@ -124,17 +125,17 @@ int main(void)
 								wypelnienie-=KROK;
 							else //Juz jest maxx sciemniona, zamigamy szybko !:)
 							{
-								OCR0A=wypelnienie+20;
+								OCR=wypelnienie+20;
 								_delay_ms(100);
 							}
 								
-							OCR0A=wypelnienie;
+							OCR=wypelnienie;
 						}
 						eeprom_busy_wait();
 						__EEGET(tmp,0); // Wczytujemy poprzednie ustawienie z EEPROM
 						if(tmp!=wypelnienie) // Jesli sie zmienilo, to zapisujemy nowe ustawienie
 						{
-							OCR0A=0; //Migniemy na potwierdzenie zapisu :)
+							OCR=0; //Migniemy na potwierdzenie zapisu :)
 							eeprom_busy_wait();
 							__EEPUT(0,wypelnienie);
 							_delay_ms(300);
@@ -145,7 +146,7 @@ int main(void)
 							uart0_puts("\n\r");
 						#endif
 						}
-						OCR0A=wypelnienie;	
+						OCR=wypelnienie;	
 					}else //Nie bylo zwolnienia klawisza, czyli rozjasniamy
 					{
 						while(czekaj(WCISNIETY)) // Rozjasniamy o KROK w petli, z opoznieniem
@@ -154,21 +155,21 @@ int main(void)
 								wypelnienie+=KROK;
 							else //Juz jest maxx rozjasniona,zamigamy szybko !:)
 							{
-								OCR0A=wypelnienie-150;
+								OCR=wypelnienie-150;
 								_delay_ms(100);
 							}
-							OCR0A=wypelnienie;
+							OCR=wypelnienie;
 						}
 						eeprom_busy_wait();
 						__EEGET(tmp,0); // Wczytujemy poprzednie ustawienie z EEPROM
 						if(tmp!=wypelnienie) // Jesli sie zmienilo, to zapisujemy nowe ustawienie
 						{
-							OCR0A=0; //Migniemy na potwierdzenie zapisu :)
+							OCR=0; //Migniemy na potwierdzenie zapisu :)
 							eeprom_busy_wait();
 							__EEPUT(0,wypelnienie);
 							_delay_ms(300);
 						}
-						OCR0A=wypelnienie;
+						OCR=wypelnienie;
 					}
 				}
 			}			
@@ -191,13 +192,13 @@ int main(void)
 				while(adc_result8 > adc_result8_prev)
 				{
 					adc_result8_prev += KROK;
-					OCR0A=adc_result8_prev;
+					OCR=adc_result8_prev;
 					_delay_ms(8);
 				}
 				while(adc_result8 < adc_result8_prev)
 				{
 					adc_result8_prev -= KROK;
-					OCR0A=adc_result8_prev;
+					OCR=adc_result8_prev;
 					_delay_ms(8);
 				}
 			}			
