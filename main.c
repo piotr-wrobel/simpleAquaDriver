@@ -68,7 +68,7 @@ static void UARTuitoa(uint16_t liczba, char *string);
 //INT0 interrupt 
 ISR(INT0_vect )
 {
-	if(!bit_is_clear(ENC_PIN, ENC_DT))
+	if(ENC_PIN & (1<<ENC_DT))
 	{
 		if(wypelnienie < WYP_MAX - KROK_ENC) 
 			wypelnienie += KROK_ENC;
@@ -92,7 +92,7 @@ ISR(INT0_vect )
 //INT1 interrupt
 ISR(INT1_vect )
 {
-	if(!bit_is_clear(ENC_PIN, ENC_CLK))
+	if(ENC_PIN & (1<<ENC_CLK))
 	{
 		if(wypelnienie < WYP_MAX - KROK_ENC) 
 			wypelnienie += KROK_ENC;
@@ -298,27 +298,23 @@ int main(void)
 			// 	}
 			// }			
 
-			OCR0A=wypelnienie;
 			if(!(ENC_PIN & (1<<ENC_SWITCH)))
 			{
-				uart0_puts_p(S_OEEPROM);
-				uart0_puts_p(S_NL);
 				eeprom_busy_wait();
 				__EEGET(tmp,0); // Wczytujemy poprzednie ustawienie z EEPROM
 				if(tmp!=wypelnienie) // Jesli sie zmienilo, to zapisujemy nowe ustawienie
 				{
-					OCR0A=0; //Migniemy na potwierdzenie zapisu :)
 					eeprom_busy_wait();
 					__EEPUT(0,wypelnienie);
-					_delay_ms(300);
 				#ifdef UART_DEBUG
 					UARTuitoa((uint16_t)wypelnienie, napis);
 					uart0_puts_p(S_ZEEPROM);
 					uart0_puts(napis);
 					uart0_puts_p(S_NL);
 				#endif										
+				}
 			}
-			}
+			OCR0A=wypelnienie;
 		}
 	}
 }
