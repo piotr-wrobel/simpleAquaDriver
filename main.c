@@ -10,6 +10,7 @@
 #include "uart/uart.h"
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
+#include <string.h>
 
 
 #define UART_DEBUG
@@ -35,13 +36,18 @@
 #define ENC_CLK PD2
 #define ENC_DT PD3
 
+#define UART_BUFFER_SIZE 32
+#define COMMAND_START '>'
+#define COMMAND_RETURN '<'
+
+const char COMMAND_GET_PWM_CURRENT[] PROGMEM=">get pwm curr";
+const char COMMAND_GET_PWM_SAVED[] PROGMEM=">get pwm saved";
+const char COMMAND_SAVE_PWM[] PROGMEM=">save pwm";
+const char COMMAND_RESTORE_PWM[] PROGMEM=">restore pwm";
+
 char napis[5];
 uint8_t switch_mode = 0;
 volatile uint8_t wypelnienie = 0, zmiana_wypelnienia = 0;
-
-#ifdef UART_DEBUG
-static void UARTuitoa(uint16_t liczba, char *string);
-#endif
 
 #ifdef UART_DEBUG
 	const char S_NL[] PROGMEM="\r\n";
@@ -51,10 +57,16 @@ static void UARTuitoa(uint16_t liczba, char *string);
 	//const char S_WCISNIETY[] PROGMEM="wcisniety...\r\n";
 	const char S_OEEPROM[] PROGMEM="odczyt z eeprom:";
 	const char S_ZEEPROM[] PROGMEM="zapis do eeprom:";
+	const char S_BZEEPROM[] PROGMEM="wypelnienie bez zmian";	
 	const char S_POMIAR[] PROGMEM="pomiar:";
 	const char DEBUG_UART_FRAME_ERROR[] PROGMEM="UART_FRAME_ERROR";
 	const char DEBUG_UART_OVERRUN_ERROR[] PROGMEM="UART_OVERRUN_ERROR";
 	const char DEBUG_UART_BUFFER_OVERFLOW[] PROGMEM="UART_BUFFER_OVERFLOW";
+#endif
+
+uint8_t zapisz_wypelnienie(uint8_t wypelnienie);
+#ifdef UART_DEBUG
+void UARTuitoa(uint16_t liczba, char *string);
 #endif
 
 
@@ -105,7 +117,9 @@ ISR(INT1_vect )
 
 int main(void)
 {
-  	uint8_t tmp=0;
+  	char uart_buffer[UART_BUFFER_SIZE] = "";
+	uint8_t uart_buffer_tmp_pointer = 0;
+	uint8_t tmp = 0, znak;
 	uint16_t uart_znak;
 	// next four instructions. // Niepotrzebne, wylaczony fuse bit CKDIV8
     //CLKPR=(1<<CLKPCE); 
@@ -162,19 +176,7 @@ int main(void)
 	{
 			if(!(ENC_PIN & (1<<ENC_SWITCH)))
 			{
-				eeprom_busy_wait();
-				__EEGET(tmp,0); // Wczytujemy poprzednie ustawienie z EEPROM
-				if(tmp!=wypelnienie) // Jesli sie zmienilo, to zapisujemy nowe ustawienie
-				{
-					eeprom_busy_wait();
-					__EEPUT(0,wypelnienie);
-				#ifdef UART_DEBUG
-					UARTuitoa((uint16_t)wypelnienie, napis);
-					uart0_puts_p(S_ZEEPROM);
-					uart0_puts(napis);
-					uart0_puts_p(S_NL);
-				#endif										
-				}
+				(void)zapisz_wypelnienie(wypelnienie);
 			}
 			if(zmiana_wypelnienia)
 			{
@@ -207,13 +209,80 @@ int main(void)
 					break;										
 				}
 			} else{
-				uart0_putc((uint8_t)(uart_znak & 0x00FF));
+				znak = (uint8_t)(uart_znak & 0x00FF);
+				if(!uart_buffer_tmp_pointer && znak == COMMAND_START){ 				//Jeśli 1 znak to '>' zaczynamy zapisywać komendę
+					uart_buffer[uart_buffer_tmp_pointer] = znak;
+					uart_buffer[++uart_buffer_tmp_pointer] = 0;
+				}else if(uart_buffer_tmp_pointer && znak != '\r' && znak != '\n'){	//jeśli następne znaki nie są końcem linii, zapisujemy je do bufora
+					uart_buffer[uart_buffer_tmp_pointer] = znak;
+					uart_buffer[++uart_buffer_tmp_pointer] = 0;
+				} else if(uart_buffer_tmp_pointer){ 								//Mamy już coś w buforze i wystąpił koniec linii, zatem mamy gotową komendę
+					uart_buffer_tmp_pointer = 0;
+				}
+			}
+			if(uart_buffer[0] && !uart_buffer_tmp_pointer){							//Tu korzystamy z komendy
+				if(strcmp_P(uart_buffer, COMMAND_GET_PWM_CURRENT) == 0){
+					UARTuitoa(wypelnienie,napis);
+					uart_putc(COMMAND_RETURN);
+					uart0_puts(napis);
+					uart0_puts_p(S_NL);
+				}
+				if(strcmp_P(uart_buffer, COMMAND_GET_PWM_SAVED) == 0){
+					eeprom_busy_wait();
+					__EEGET(tmp,0); // Wczytujemy poprzednie ustawienie z EEPROM
+					UARTuitoa(tmp,napis);
+					uart_putc(COMMAND_RETURN);
+					uart0_puts(napis);
+					uart0_puts_p(S_NL);
+				}
+				if(strcmp_P(uart_buffer, COMMAND_SAVE_PWM) == 0){
+					UARTuitoa(zapisz_wypelnienie(wypelnienie),napis);
+					uart_putc(COMMAND_RETURN);
+					uart0_puts(napis);
+					uart0_puts_p(S_NL);					
+				}
+				if(strcmp_P(uart_buffer, COMMAND_RESTORE_PWM) == 0){
+					eeprom_busy_wait();
+					__EEGET(wypelnienie,0); // Wczytujemy poprzednie ustawienie z EEPROM					
+					OCR0A = wypelnienie;
+					UARTuitoa(0,napis);
+					uart_putc(COMMAND_RETURN);
+					uart0_puts(napis);
+					uart0_puts_p(S_NL);					
+				}				
+				uart_buffer[0] = 0;
 			}
 	}
 }
 
+uint8_t zapisz_wypelnienie(uint8_t wypelnienie)
+{
+	uint8_t tmp;
+
+	eeprom_busy_wait();
+	__EEGET(tmp,0); // Wczytujemy poprzednie ustawienie z EEPROM
+	if(tmp != wypelnienie) // Jesli sie zmienilo, to zapisujemy nowe ustawienie
+	{
+		eeprom_busy_wait();
+		__EEPUT(0, wypelnienie);
+	#ifdef UART_DEBUG
+		UARTuitoa((uint16_t)wypelnienie, napis);
+		uart0_puts_p(S_ZEEPROM);
+		uart0_puts(napis);
+		uart0_puts_p(S_NL);
+	#endif
+		return 0;										
+	} else {
+	#ifdef UART_DEBUG
+		uart0_puts_p(S_BZEEPROM);
+		uart0_puts_p(S_NL);
+	#endif
+		return 1;				
+	}
+}
+
 #ifdef UART_DEBUG
-static void UARTuitoa(uint16_t liczba, char *string)
+void UARTuitoa(uint16_t liczba, char *string)
 {
 	uint8_t nibble=0,pozycja;
 	for(pozycja=0;pozycja<4;pozycja++)
