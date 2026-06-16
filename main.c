@@ -52,6 +52,9 @@ static void UARTuitoa(uint16_t liczba, char *string);
 	const char S_OEEPROM[] PROGMEM="odczyt z eeprom:";
 	const char S_ZEEPROM[] PROGMEM="zapis do eeprom:";
 	const char S_POMIAR[] PROGMEM="pomiar:";
+	const char DEBUG_UART_FRAME_ERROR[] PROGMEM="UART_FRAME_ERROR";
+	const char DEBUG_UART_OVERRUN_ERROR[] PROGMEM="UART_OVERRUN_ERROR";
+	const char DEBUG_UART_BUFFER_OVERFLOW[] PROGMEM="UART_BUFFER_OVERFLOW";
 #endif
 
 
@@ -103,6 +106,7 @@ ISR(INT1_vect )
 int main(void)
 {
   	uint8_t tmp=0;
+	uint16_t uart_znak;
 	// next four instructions. // Niepotrzebne, wylaczony fuse bit CKDIV8
     //CLKPR=(1<<CLKPCE); 
     //CLKPR=0; // 8 MHZ
@@ -181,6 +185,29 @@ int main(void)
 				uart0_puts_p(S_NL);
 			#endif
 				zmiana_wypelnienia = 0;
+			}
+			uart_znak = uart0_getc();
+			if(uart_znak & (UART_NO_DATA | UART_BUFFER_OVERFLOW | UART_OVERRUN_ERROR | UART_FRAME_ERROR))
+			{
+				switch (uart_znak)
+				{
+					case UART_NO_DATA:
+					break;
+					case UART_BUFFER_OVERFLOW:
+						uart0_puts_p(DEBUG_UART_BUFFER_OVERFLOW);
+						uart0_puts_p(S_NL);
+					break;
+					case UART_OVERRUN_ERROR:
+						uart0_puts_p(DEBUG_UART_OVERRUN_ERROR);
+						uart0_puts_p(S_NL);					
+					break;
+					case UART_FRAME_ERROR:
+						uart0_puts_p(DEBUG_UART_FRAME_ERROR);
+						uart0_puts_p(S_NL);						
+					break;										
+				}
+			} else{
+				uart0_putc((uint8_t)(uart_znak & 0x00FF));
 			}
 	}
 }
