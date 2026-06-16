@@ -37,7 +37,7 @@
 
 char napis[5];
 uint8_t switch_mode = 0;
-volatile uint8_t wypelnienie = 0;
+volatile uint8_t wypelnienie = 0, zmiana_wypelnienia = 0;
 
 #ifdef UART_DEBUG
 static void UARTuitoa(uint16_t liczba, char *string);
@@ -74,11 +74,7 @@ ISR(INT0_vect )
 			wypelnienie = WYP_MIN;
 		uart0_putc('-');
 	}
-#ifdef UART_DEBUG
-	UARTuitoa(wypelnienie, napis);
-	uart0_puts(napis);
-	uart0_puts_p(S_NL);
-#endif
+	zmiana_wypelnienia = 1;
 }
 
 //INT1 interrupt
@@ -100,11 +96,8 @@ ISR(INT1_vect )
 			wypelnienie = WYP_MIN;
 		uart0_putc('-');
 	}
-#ifdef UART_DEBUG
-	UARTuitoa(wypelnienie, napis);
-	uart0_puts(napis);
-	uart0_puts_p(S_NL);
-#endif
+	zmiana_wypelnienia = 1;
+
 }
 
 int main(void)
@@ -179,7 +172,16 @@ int main(void)
 				#endif										
 				}
 			}
-			OCR0A=wypelnienie;
+			if(zmiana_wypelnienia)
+			{
+				OCR0A=wypelnienie;
+			#ifdef UART_DEBUG
+				UARTuitoa(wypelnienie, napis);
+				uart0_puts(napis);
+				uart0_puts_p(S_NL);
+			#endif
+				zmiana_wypelnienia = 0;
+			}
 	}
 }
 
