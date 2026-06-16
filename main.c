@@ -4,6 +4,7 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <avr/eeprom.h>
 #include <avr/io.h>
 #include <util/delay.h>
@@ -44,6 +45,7 @@ const char COMMAND_GET_PWM_CURRENT[] PROGMEM=">get pwm curr";
 const char COMMAND_GET_PWM_SAVED[] PROGMEM=">get pwm saved";
 const char COMMAND_SAVE_PWM[] PROGMEM=">save pwm";
 const char COMMAND_RESTORE_PWM[] PROGMEM=">restore pwm";
+const char COMMAND_SET_PWM[] PROGMEM=">set pwm:";
 
 char napis[5];
 uint8_t switch_mode = 0;
@@ -249,7 +251,32 @@ int main(void)
 					uart_putc(COMMAND_RETURN);
 					uart0_puts(napis);
 					uart0_puts_p(S_NL);					
-				}				
+				}
+				
+				uint8_t dlugosc_1 = strlen_P(COMMAND_SET_PWM);
+				uint8_t dlugosc_2 = strlen(uart_buffer);
+				int8_t dopasowanie = strncmp_P(uart_buffer, COMMAND_SET_PWM, dlugosc_1);
+				if(!dopasowanie && dlugosc_2 > dlugosc_1)
+				{
+					strcpy(napis, uart_buffer + dlugosc_1);
+					if(strlen(napis) < 4)
+					{
+						int16_t new_pwm = atoi(napis);
+						if(new_pwm > 0 && new_pwm <256)
+						 {
+							wypelnienie = (uint8_t)new_pwm;
+							OCR0A = wypelnienie;
+							UARTuitoa(0,napis);	
+						 } else{
+							UARTuitoa(1,napis);	
+						 }
+					} else {
+						UARTuitoa(1,napis);		
+					}
+					uart_putc(COMMAND_RETURN);
+					uart0_puts(napis);
+					uart0_puts_p(S_NL);
+				}
 				uart_buffer[0] = 0;
 			}
 	}
