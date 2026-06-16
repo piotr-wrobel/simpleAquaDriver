@@ -55,11 +55,11 @@ static void UARTuitoa(uint16_t liczba, char *string);
 //uint16_t ADC_run(void);
 
 #ifdef UART_DEBUG
-	const char S_NL[] PROGMEM="\n\r";
-	const char S_START[] PROGMEM="Start...\n\r";
-	const char S_TPRZYC[] PROGMEM="Tryb przycisku\n\r";
-	const char S_TPOT[] PROGMEM="Tryb potencjometru/encodera\n\r";
-	const char S_WCISNIETY[] PROGMEM="wcisniety...\n\r";
+	const char S_NL[] PROGMEM="\r\n";
+	const char S_START[] PROGMEM="Start...\r\n";
+	const char S_TPRZYC[] PROGMEM="Tryb przycisku\r\n";
+	const char S_TPOT[] PROGMEM="Tryb potencjometru/encodera\r\n";
+	const char S_WCISNIETY[] PROGMEM="wcisniety...\r\n";
 	const char S_OEEPROM[] PROGMEM="odczyt z eeprom:";
 	const char S_ZEEPROM[] PROGMEM="zapis do eeprom:";
 	const char S_POMIAR[] PROGMEM="pomiar:";
@@ -283,7 +283,7 @@ int main(void)
 			// 	UARTuitoa((uint16_t)adc_result8, napis);
 			// 	uart0_puts(":");
 			// 	uart0_puts(napis);
-			// 	uart0_puts("\n\r");
+			// 	uart0_puts("\r\n");
 			// #endif
 			// 	while(adc_result8 > adc_result8_prev)
 			// 	{
