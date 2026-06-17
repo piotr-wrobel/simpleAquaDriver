@@ -41,11 +41,11 @@
 #define COMMAND_START '>'
 #define COMMAND_RETURN '<'
 
-const char COMMAND_GET_PWM_CURRENT[] PROGMEM=">get pwm curr";
-const char COMMAND_GET_PWM_SAVED[] PROGMEM=">get pwm saved";
-const char COMMAND_SAVE_PWM[] PROGMEM=">save pwm";
-const char COMMAND_RESTORE_PWM[] PROGMEM=">restore pwm";
-const char COMMAND_SET_PWM[] PROGMEM=">set pwm:";
+const char COMMAND_GET_PWM_CURRENT[] PROGMEM=">pwm.gcurr";
+const char COMMAND_GET_PWM_SAVED[] PROGMEM=">pwm.gsaved";
+const char COMMAND_SAVE_PWM[] PROGMEM=">pwm.save";
+const char COMMAND_RESTORE_PWM[] PROGMEM=">pwm.restore";
+const char COMMAND_SET_PWM[] PROGMEM=">pwm.set:";
 
 char napis[5];
 uint8_t switch_mode = 0;
