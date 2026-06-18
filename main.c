@@ -40,14 +40,18 @@
 #define UART_BUFFER_SIZE 32
 #define COMMAND_START '>'
 #define COMMAND_RETURN '<'
+#define COMMAND_SEPARATOR ':'
+#define COMMAND_SEED_LENGTH 4
 
-const char COMMAND_GET_PWM_CURRENT[] PROGMEM=">pwm.gcurr";
-const char COMMAND_GET_PWM_SAVED[] PROGMEM=">pwm.gsaved";
-const char COMMAND_SAVE_PWM[] PROGMEM=">pwm.save";
-const char COMMAND_RESTORE_PWM[] PROGMEM=">pwm.restore";
-const char COMMAND_SET_PWM[] PROGMEM=">pwm.set:";
+const char COMMAND_RETURN_OK[] PROGMEM="00";
+const char COMMAND_RETURN_ERROR[] PROGMEM="01";
 
-char napis[5];
+const char COMMAND_PWM_GCURRENT[] PROGMEM=":pwm.gcurr";
+const char COMMAND_PWM_GSAVED[] PROGMEM=":pwm.gsaved";
+const char COMMAND_PWM_SAVE[] PROGMEM=":pwm.save";
+const char COMMAND_PWM_RESTORE[] PROGMEM=":pwm.restore";
+const char COMMAND_PWM_SET[] PROGMEM=":pwm.set:";
+
 uint8_t switch_mode = 0;
 volatile uint8_t wypelnienie = 0, zmiana_wypelnienia = 0;
 
@@ -66,6 +70,8 @@ volatile uint8_t wypelnienie = 0, zmiana_wypelnienia = 0;
 	const char DEBUG_UART_BUFFER_OVERFLOW[] PROGMEM="UART_BUFFER_OVERFLOW";
 #endif
 
+uint8_t przelicz_procent_na_hex(uint8_t procent);
+uint8_t przelicz_hex_na_procent(uint8_t hex);
 uint8_t zapisz_wypelnienie(uint8_t wypelnienie);
 #ifdef UART_DEBUG
 void UARTuitoa(uint16_t liczba, char *string);
@@ -81,7 +87,7 @@ ISR(INT0_vect )
 			wypelnienie += KROK_ENC;
 		else
 			wypelnienie = WYP_MAX;
-		uart0_putc('+');
+		uart_putc('+');
 	}
 	else
 	{
@@ -89,7 +95,7 @@ ISR(INT0_vect )
 			wypelnienie -= KROK_ENC;
 		else
 			wypelnienie = WYP_MIN;
-		uart0_putc('-');
+		uart_putc('-');
 	}
 	zmiana_wypelnienia = 1;
 }
@@ -103,7 +109,7 @@ ISR(INT1_vect )
 			wypelnienie += KROK_ENC;
 		else
 			wypelnienie = WYP_MAX;
-		uart0_putc('+');
+		uart_putc('+');
 	}
 	else
 	{
@@ -111,7 +117,7 @@ ISR(INT1_vect )
 			wypelnienie -= KROK_ENC;
 		else
 			wypelnienie = WYP_MIN;
-		uart0_putc('-');
+		uart_putc('-');
 	}
 	zmiana_wypelnienia = 1;
 
@@ -119,8 +125,10 @@ ISR(INT1_vect )
 
 int main(void)
 {
-  	char uart_buffer[UART_BUFFER_SIZE] = "";
-	uint8_t uart_buffer_tmp_pointer = 0;
+  	char napis[5], seed[COMMAND_SEED_LENGTH + 1];
+	char uart_buffer[UART_BUFFER_SIZE] = "";
+	char * uart_buffer_pointer;
+	uint8_t uart_buffer_index = 0;
 	uint8_t tmp = 0, znak;
 	uint16_t uart_znak;
 	// next four instructions. // Niepotrzebne, wylaczony fuse bit CKDIV8
@@ -153,18 +161,18 @@ int main(void)
 	sei();		
 
 #ifdef UART_DEBUG
-	uart0_init(UART_BAUD_SELECT(BAUD0,F_CPU));
-	uart0_puts_p(S_NL);
-	uart0_puts_p(S_START);
-	uart0_puts_p(S_TPOT);
+	uart_init(UART_BAUD_SELECT(BAUD0,F_CPU));
+	uart_puts_p(S_NL);
+	uart_puts_p(S_START);
+	uart_puts_p(S_TPOT);
 #endif
 	eeprom_busy_wait();
 	__EEGET(wypelnienie,0); //Wczytujemy z pamieci zapisane wypelnienie
 #ifdef UART_DEBUG
 	UARTuitoa((uint16_t)wypelnienie, napis);
-	uart0_puts_p(S_OEEPROM);
-	uart0_puts(napis);
-	uart0_puts_p(S_NL);
+	uart_puts_p(S_OEEPROM);
+	uart_puts(napis);
+	uart_puts_p(S_NL);
 #endif
 	for(tmp=WYP_MIN;tmp<wypelnienie;tmp+=KROK) // Plynnie rozjasniamy do osiagniecia zapisanego w eeprom
 	{
@@ -185,12 +193,12 @@ int main(void)
 				OCR0A=wypelnienie;
 			#ifdef UART_DEBUG
 				UARTuitoa(wypelnienie, napis);
-				uart0_puts(napis);
-				uart0_puts_p(S_NL);
+				uart_puts(napis);
+				uart_puts_p(S_NL);
 			#endif
 				zmiana_wypelnienia = 0;
 			}
-			uart_znak = uart0_getc();
+			uart_znak = uart_getc();
 			if(uart_znak & (UART_NO_DATA | UART_BUFFER_OVERFLOW | UART_OVERRUN_ERROR | UART_FRAME_ERROR))
 			{
 				switch (uart_znak)
@@ -198,88 +206,142 @@ int main(void)
 					case UART_NO_DATA:
 					break;
 					case UART_BUFFER_OVERFLOW:
-						uart0_puts_p(DEBUG_UART_BUFFER_OVERFLOW);
-						uart0_puts_p(S_NL);
+						uart_puts_p(DEBUG_UART_BUFFER_OVERFLOW);
+						uart_puts_p(S_NL);
 					break;
 					case UART_OVERRUN_ERROR:
-						uart0_puts_p(DEBUG_UART_OVERRUN_ERROR);
-						uart0_puts_p(S_NL);					
+						uart_puts_p(DEBUG_UART_OVERRUN_ERROR);
+						uart_puts_p(S_NL);					
 					break;
 					case UART_FRAME_ERROR:
-						uart0_puts_p(DEBUG_UART_FRAME_ERROR);
-						uart0_puts_p(S_NL);						
+						uart_puts_p(DEBUG_UART_FRAME_ERROR);
+						uart_puts_p(S_NL);						
 					break;										
 				}
 			} else{
 				znak = (uint8_t)(uart_znak & 0x00FF);
-				if(!uart_buffer_tmp_pointer && znak == COMMAND_START){ 				//Jeśli 1 znak to '>' zaczynamy zapisywać komendę
-					uart_buffer[uart_buffer_tmp_pointer] = znak;
-					uart_buffer[++uart_buffer_tmp_pointer] = 0;
-				}else if(uart_buffer_tmp_pointer && znak != '\r' && znak != '\n'){	//jeśli następne znaki nie są końcem linii, zapisujemy je do bufora
-					uart_buffer[uart_buffer_tmp_pointer] = znak;
-					uart_buffer[++uart_buffer_tmp_pointer] = 0;
-				} else if(uart_buffer_tmp_pointer){ 								//Mamy już coś w buforze i wystąpił koniec linii, zatem mamy gotową komendę
-					uart_buffer_tmp_pointer = 0;
+				if(!uart_buffer_index && znak == COMMAND_START){ 				//Jeśli 1 znak to '>' zaczynamy zapisywać komendę
+					uart_buffer[uart_buffer_index] = znak;
+					uart_buffer[++uart_buffer_index] = 0;
+				}else if(uart_buffer_index && znak != '\r' && znak != '\n'){	//jeśli następne znaki nie są końcem linii, zapisujemy je do bufora
+					uart_buffer[uart_buffer_index] = znak;
+					uart_buffer[++uart_buffer_index] = 0;
+				} else if(uart_buffer_index){ 					//Mamy już coś w buforze i wystąpił koniec linii, zatem mamy gotową komendę
+					uart_buffer_index = 0;
 				}
 			}
-			if(uart_buffer[0] && !uart_buffer_tmp_pointer){							//Tu korzystamy z komendy
-				if(strcmp_P(uart_buffer, COMMAND_GET_PWM_CURRENT) == 0){
-					UARTuitoa(wypelnienie,napis);
+			if(uart_buffer[0] && !uart_buffer_index && strlen(uart_buffer) > COMMAND_SEED_LENGTH + 2){				//Tu korzystamy z komendy
+				
+				uart_buffer_pointer = uart_buffer + 1; 								//Ustawiamy na 1 znam seed'a
+				strlcpy(seed, uart_buffer_pointer, COMMAND_SEED_LENGTH +1);
+				uart_buffer_pointer = uart_buffer_pointer + COMMAND_SEED_LENGTH;	//Ustawiamy na 1 znak komendy
+				
+				if(strcmp_P(uart_buffer_pointer, COMMAND_PWM_GCURRENT) == 0){				// Komenda pobrania bieżącej jasności
 					uart_putc(COMMAND_RETURN);
-					uart0_puts(napis);
-					uart0_puts_p(S_NL);
-				}
-				if(strcmp_P(uart_buffer, COMMAND_GET_PWM_SAVED) == 0){
-					eeprom_busy_wait();
-					__EEGET(tmp,0); // Wczytujemy poprzednie ustawienie z EEPROM
-					UARTuitoa(tmp,napis);
-					uart_putc(COMMAND_RETURN);
-					uart0_puts(napis);
-					uart0_puts_p(S_NL);
-				}
-				if(strcmp_P(uart_buffer, COMMAND_SAVE_PWM) == 0){
-					UARTuitoa(zapisz_wypelnienie(wypelnienie),napis);
-					uart_putc(COMMAND_RETURN);
-					uart0_puts(napis);
-					uart0_puts_p(S_NL);					
-				}
-				if(strcmp_P(uart_buffer, COMMAND_RESTORE_PWM) == 0){
-					eeprom_busy_wait();
-					__EEGET(wypelnienie,0); // Wczytujemy poprzednie ustawienie z EEPROM					
-					OCR0A = wypelnienie;
-					UARTuitoa(0,napis);
-					uart_putc(COMMAND_RETURN);
-					uart0_puts(napis);
-					uart0_puts_p(S_NL);					
+					uart_puts(seed);
+					uart_putc(COMMAND_SEPARATOR);
+					uart_puts_p(COMMAND_RETURN_OK);
+					uart_putc(COMMAND_SEPARATOR);
+					itoa(przelicz_hex_na_procent(wypelnienie),napis,10);
+					uart_puts(napis);
+					uart_putc(COMMAND_SEPARATOR);
+					itoa(wypelnienie,napis,10);
+					uart_puts(napis);					
+					uart_puts_p(S_NL);
 				}
 				
-				uint8_t dlugosc_1 = strlen_P(COMMAND_SET_PWM);
-				uint8_t dlugosc_2 = strlen(uart_buffer);
-				int8_t dopasowanie = strncmp_P(uart_buffer, COMMAND_SET_PWM, dlugosc_1);
+				if(strcmp_P(uart_buffer_pointer, COMMAND_PWM_GSAVED) == 0){		//Komenda pobrania domyślnej janości 
+					eeprom_busy_wait();
+					__EEGET(tmp,0); 									// Wczytujemy poprzednie ustawienie z EEPROM
+					uart_putc(COMMAND_RETURN);
+					uart_puts(seed);
+					uart_putc(COMMAND_SEPARATOR);
+					uart_puts_p(COMMAND_RETURN_OK);
+					uart_putc(COMMAND_SEPARATOR);
+					itoa(przelicz_hex_na_procent(tmp),napis,10);
+					uart_puts(napis);
+					uart_puts_p(S_NL);
+				}
+				
+				if(strcmp_P(uart_buffer_pointer, COMMAND_PWM_SAVE) == 0){		//Komenda ustawienia domyślnej janości 
+					itoa(przelicz_hex_na_procent(wypelnienie),napis,10);
+					zapisz_wypelnienie(wypelnienie);
+					uart_putc(COMMAND_RETURN);
+					uart_puts(seed);
+					uart_putc(COMMAND_SEPARATOR);
+					uart_puts_p(COMMAND_RETURN_OK);
+					uart_putc(COMMAND_SEPARATOR);
+					uart_puts(napis);
+					uart_puts_p(S_NL);					
+				}
+				if(strcmp_P(uart_buffer_pointer, COMMAND_PWM_RESTORE) == 0){	//Komenda przywrócenia domyślnej janości jako bieżącej
+					eeprom_busy_wait();
+					__EEGET(wypelnienie,0); 							// Wczytujemy poprzednie ustawienie z EEPROM					
+					OCR0A = wypelnienie;
+					itoa(przelicz_hex_na_procent(wypelnienie),napis,10);
+					uart_putc(COMMAND_RETURN);
+					uart_puts(seed);
+					uart_putc(COMMAND_SEPARATOR);
+					uart_puts_p(COMMAND_RETURN_OK);
+					uart_putc(COMMAND_SEPARATOR);
+					uart_puts(napis);
+					uart_puts_p(S_NL);				
+				}
+				
+				uint8_t dlugosc_1 = strlen_P(COMMAND_PWM_SET);			//Komenda ustawienia bieżącej janości 
+				uint8_t dlugosc_2 = strlen(uart_buffer_pointer);
+				int8_t dopasowanie = strncmp_P(uart_buffer_pointer, COMMAND_PWM_SET, dlugosc_1);
 				if(!dopasowanie && dlugosc_2 > dlugosc_1)
 				{
-					strcpy(napis, uart_buffer + dlugosc_1);
+					uint8_t wynik = 0;
+					strcpy(napis, uart_buffer_pointer + dlugosc_1);
 					if(strlen(napis) < 4)
 					{
 						int16_t new_pwm = atoi(napis);
-						if(new_pwm > 0 && new_pwm <256)
+						if(new_pwm >= 0 && new_pwm <= 100)
 						 {
-							wypelnienie = (uint8_t)new_pwm;
+							wypelnienie = przelicz_procent_na_hex((uint8_t)new_pwm);
 							OCR0A = wypelnienie;
-							UARTuitoa(0,napis);	
 						 } else{
-							UARTuitoa(1,napis);	
+							wynik = 1;
 						 }
 					} else {
-						UARTuitoa(1,napis);		
+						wynik = 1;	
 					}
 					uart_putc(COMMAND_RETURN);
-					uart0_puts(napis);
-					uart0_puts_p(S_NL);
+					uart_puts(seed);
+					uart_putc(COMMAND_SEPARATOR);
+					if(!wynik)
+						uart_puts_p(COMMAND_RETURN_OK);
+					else
+						uart_puts_p(COMMAND_RETURN_ERROR);
+					uart_putc(COMMAND_SEPARATOR);
+					uart_puts(napis);
+					uart_puts_p(S_NL);
 				}
 				uart_buffer[0] = 0;
 			}
 	}
+}
+
+uint8_t przelicz_procent_na_hex(uint8_t procent)
+{
+	uint16_t tmp;
+	if(procent > 100)
+		return 0;
+	tmp = ((uint16_t)procent * (uint16_t)255) / (uint16_t)100;
+	return (uint8_t) tmp; 
+}
+
+uint8_t przelicz_hex_na_procent(uint8_t hex)
+{
+	uint16_t tmp,tmp2,tmp3;
+	if(hex == 0) return 0;
+	tmp = ((uint16_t)hex * (uint16_t)100);
+	tmp2 = tmp / (uint16_t)255;
+	tmp3 = tmp2 * (uint16_t)255;
+	if(tmp2 < 100 && (tmp != tmp3) ) tmp2++; //obejście błędu zaokrąglnenia przy dzieleniu na int'ach
+	return (uint8_t)tmp2; 
 }
 
 uint8_t zapisz_wypelnienie(uint8_t wypelnienie)
@@ -293,16 +355,17 @@ uint8_t zapisz_wypelnienie(uint8_t wypelnienie)
 		eeprom_busy_wait();
 		__EEPUT(0, wypelnienie);
 	#ifdef UART_DEBUG
+		char napis[5];	
 		UARTuitoa((uint16_t)wypelnienie, napis);
-		uart0_puts_p(S_ZEEPROM);
-		uart0_puts(napis);
-		uart0_puts_p(S_NL);
+		uart_puts_p(S_ZEEPROM);
+		uart_puts(napis);
+		uart_puts_p(S_NL);
 	#endif
 		return 0;										
 	} else {
 	#ifdef UART_DEBUG
-		uart0_puts_p(S_BZEEPROM);
-		uart0_puts_p(S_NL);
+		uart_puts_p(S_BZEEPROM);
+		uart_puts_p(S_NL);
 	#endif
 		return 1;				
 	}

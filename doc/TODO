@@ -1,6 +1,0 @@
-- Usunięcie błędu z wysłanie 0 w pwm.send
-- Obsługa losowego ziarna w komunikatach i odsyłanie go w odpowiedzi
-- Odsyłanie po komunikacie poprawnego wykonania polecenia wartości zwrotnej po dwukropku np
-    >56FE:pwm.send:20
-    <56FE:000:20
-- Obsługa wartości procentowej w nastawach 0-100 i przeliczenie na wartośc 0x00 - 0xFF
