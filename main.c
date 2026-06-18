@@ -52,7 +52,6 @@ const char COMMAND_PWM_SAVE[] PROGMEM=":pwm.save";
 const char COMMAND_PWM_RESTORE[] PROGMEM=":pwm.restore";
 const char COMMAND_PWM_SET[] PROGMEM=":pwm.set:";
 
-uint8_t switch_mode = 0;
 volatile uint8_t wypelnienie = 0, zmiana_wypelnienia = 0;
 
 #ifdef UART_DEBUG
@@ -223,12 +222,12 @@ int main(void)
 				if(!uart_buffer_index && znak == COMMAND_START){ 				//Jeśli 1 znak to '>' zaczynamy zapisywać komendę
 					uart_buffer[uart_buffer_index] = znak;
 					uart_buffer[++uart_buffer_index] = 0;
-				}else if(uart_buffer_index && znak != '\r' && znak != '\n'){	//jeśli następne znaki nie są końcem linii, zapisujemy je do bufora
+				}else if(uart_buffer_index && znak != '\r' && znak != '\n' && uart_buffer_index < UART_BUFFER_SIZE - 1){	//jeśli następne znaki nie są końcem linii, zapisujemy je do bufora
 					uart_buffer[uart_buffer_index] = znak;
 					uart_buffer[++uart_buffer_index] = 0;
-				} else if(uart_buffer_index){ 					//Mamy już coś w buforze i wystąpił koniec linii, zatem mamy gotową komendę
+				} else if(uart_buffer_index && uart_buffer_index < UART_BUFFER_SIZE){ 					//Mamy już coś w buforze i wystąpił koniec linii, zatem mamy gotową komendę
 					uart_buffer_index = 0;
-				}
+				} 
 			}
 			if(uart_buffer[0] && !uart_buffer_index && strlen(uart_buffer) > COMMAND_SEED_LENGTH + 2){				//Tu korzystamy z komendy
 				
@@ -320,6 +319,7 @@ int main(void)
 					uart_puts_p(S_NL);
 				}
 				uart_buffer[0] = 0;
+				uart_buffer_index = 0;
 			}
 	}
 }
