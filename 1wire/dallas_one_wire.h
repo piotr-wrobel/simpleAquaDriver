@@ -34,10 +34,10 @@
 
 // Pin defines
 
-#define DALLAS_PORT 	PORTB
-#define DALLAS_PORT_IN 	PINB
-#define DALLAS_DDR 	DDRB
-#define DALLAS_PIN 	PB3
+#define DALLAS_PORT 	PORTD
+#define DALLAS_PORT_IN 	PIND
+#define DALLAS_DDR 	DDRD
+#define DALLAS_PIN 	PD7
 
 // The number of devices on the bus.
 #define DALLAS_NUM_DEVICES 6

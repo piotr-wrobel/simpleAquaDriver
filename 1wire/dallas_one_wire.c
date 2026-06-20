@@ -84,7 +84,7 @@
 // Private function prototypes //
 /////////////////////////////////
 
-static uint8_t dallas_discover_identifier(DALLAS_IDENTIFIER_t *, DALLAS_IDENTIFIER_t *, uint8_t, uint8_t *, uint8_t);
+static DALLAS_ONEWIRE_STATUS_t dallas_discover_identifier(DALLAS_IDENTIFIER_t *, DALLAS_IDENTIFIER_t *, uint8_t, uint8_t *, uint8_t);
 
 ///////////////
 // Functions //

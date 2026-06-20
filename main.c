@@ -17,6 +17,9 @@
 #include "1wire/ds18b20_lib.h"
 
 
+#define ASCII_ZERO 0x30
+#define ASCII_A    0x37
+
 #define UART_DEBUG
 #define BAUD0 38400
 
@@ -46,14 +49,20 @@
 #define COMMAND_SEPARATOR ':'
 #define COMMAND_SEED_LENGTH 4
 
+DALLAS_IDENTIFIER_LIST_t onewires;
+uint8_t  wynik_szukania_onewire;
+uint8_t onewire_device_family, onewire_device_presence, onewire_devices;
+
 const char COMMAND_RETURN_OK[] PROGMEM="00";
 const char COMMAND_RETURN_ERROR[] PROGMEM="01";
+const char COMMAND_RETURN_NO_DEVICES[] PROGMEM="11";
 
 const char COMMAND_PWM_GCURRENT[] PROGMEM=":pwm.gcurr";
 const char COMMAND_PWM_GSAVED[] PROGMEM=":pwm.gsaved";
 const char COMMAND_PWM_SAVE[] PROGMEM=":pwm.save";
 const char COMMAND_PWM_RESTORE[] PROGMEM=":pwm.restore";
 const char COMMAND_PWM_SET[] PROGMEM=":pwm.set:";
+const char COMMAND_TMP_SEARCH[] PROGMEM=":temp.search";
 
 volatile uint8_t wypelnienie = 0, zmiana_wypelnienia = 0;
 
@@ -319,6 +328,41 @@ int main(void)
 						uart_puts_p(COMMAND_RETURN_ERROR);
 					uart_putc(COMMAND_SEPARATOR);
 					uart_puts(napis);
+					uart_puts_p(S_NL);
+				}
+
+				if(strcmp_P(uart_buffer_pointer, COMMAND_TMP_SEARCH) == 0){	//Komenda wyszukania czujników temperatury
+					const char * result = NULL; uint8_t devices = 0;
+					wynik_szukania_onewire = dallas_search_identifiers(&onewires);
+					onewire_devices = 0;
+					if( wynik_szukania_onewire == DALLAS_IDENTIFIER_DONE)
+					{
+						for(uint8_t device_number = 0; device_number < onewires.num_devices; device_number++)
+						{
+							onewire_device_presence = dallas_check_device_presence(&(onewires.identifiers[device_number]), &onewire_device_family);
+							if( onewire_device_presence == DALLAS_DEVICE_IS_PRESENT && onewire_device_family == ONEWIRE_DS18B20_FAMILY)
+							{
+								onewire_devices++;
+							}				
+						}
+						if(onewire_devices > 0){
+							result = COMMAND_RETURN_OK;
+							devices = onewire_devices + ASCII_ZERO;
+						} else {
+							result = COMMAND_RETURN_NO_DEVICES;
+							devices = 0 + ASCII_ZERO;
+						}
+					} else
+					{
+						result = COMMAND_RETURN_ERROR;
+						devices = 0 + ASCII_ZERO;
+					}
+					uart_putc(COMMAND_RETURN);
+					uart_puts(seed);
+					uart_putc(COMMAND_SEPARATOR);
+					uart_puts_p(result);
+					uart_putc(COMMAND_SEPARATOR);
+					uart_putc(devices);
 					uart_puts_p(S_NL);
 				}
 				uart_buffer[0] = 0;
