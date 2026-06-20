@@ -50,12 +50,16 @@
 #define COMMAND_SEED_LENGTH 4
 
 DALLAS_IDENTIFIER_LIST_t onewires;
+DS18B20_TEMPERATURE_t ds18b20_temperature;
+DS18B20_STATUS_t  ds18b20_status;
 uint8_t  wynik_szukania_onewire;
 uint8_t onewire_device_family, onewire_device_presence, onewire_devices;
 
 const char COMMAND_RETURN_OK[] PROGMEM="00";
 const char COMMAND_RETURN_ERROR[] PROGMEM="01";
 const char COMMAND_RETURN_NO_DEVICES[] PROGMEM="11";
+const char COMMAND_RETURN_BAD_DEVICE_NUMBER[] PROGMEM="21";
+const char COMMAND_RETURN_DEVICE_READ_ERRO[] PROGMEM="31";
 
 const char COMMAND_PWM_GCURRENT[] PROGMEM=":pwm.gcurr";
 const char COMMAND_PWM_GSAVED[] PROGMEM=":pwm.gsaved";
@@ -63,6 +67,7 @@ const char COMMAND_PWM_SAVE[] PROGMEM=":pwm.save";
 const char COMMAND_PWM_RESTORE[] PROGMEM=":pwm.restore";
 const char COMMAND_PWM_SET[] PROGMEM=":pwm.set:";
 const char COMMAND_TMP_SEARCH[] PROGMEM=":temp.search";
+const char COMMAND_TMP_READ[] PROGMEM=":temp.read:";
 
 volatile uint8_t wypelnienie = 0, zmiana_wypelnienia = 0;
 
@@ -81,6 +86,7 @@ volatile uint8_t wypelnienie = 0, zmiana_wypelnienia = 0;
 	const char DEBUG_UART_BUFFER_OVERFLOW[] PROGMEM="UART_BUFFER_OVERFLOW";
 #endif
 
+char buff_tmp[20] = {0};
 uint8_t przelicz_procent_na_hex(uint8_t procent);
 uint8_t przelicz_hex_na_procent(uint8_t hex);
 uint8_t zapisz_wypelnienie(uint8_t wypelnienie);
@@ -365,6 +371,71 @@ int main(void)
 					uart_putc(devices);
 					uart_puts_p(S_NL);
 				}
+				
+				dlugosc_1 = strlen_P(COMMAND_TMP_READ);			//Komenda odczytania temperatury
+				dlugosc_2 = strlen(uart_buffer_pointer);
+				dopasowanie = strncmp_P(uart_buffer_pointer, COMMAND_TMP_READ, dlugosc_1);
+				if(!dopasowanie && dlugosc_2 > dlugosc_1)
+				{
+					char temperature[10];
+					strcpy(temperature, "00.0");
+					const char * result = NULL;
+					uint8_t index = 0;
+					strcpy(napis, uart_buffer_pointer + dlugosc_1);
+					if(strlen(napis) < 2)
+					{
+						int8_t device = (uint8_t)atoi(napis);
+						wynik_szukania_onewire = dallas_search_identifiers(&onewires);
+						onewire_devices = 0;
+						if( wynik_szukania_onewire == DALLAS_IDENTIFIER_DONE)
+						{
+							for(uint8_t device_number = 0; device_number < onewires.num_devices; device_number++)
+							{
+								onewire_device_presence = dallas_check_device_presence(&(onewires.identifiers[device_number]), &onewire_device_family);
+								if( onewire_device_presence == DALLAS_DEVICE_IS_PRESENT && onewire_device_family == ONEWIRE_DS18B20_FAMILY)
+								{
+									onewire_devices++;
+								}				
+							}
+							if(onewire_devices > 0 ){
+								if(device <= onewire_devices && device > 0){
+										DS18B20convertTemperature(&(onewires.identifiers[device - 1]), DS18B20_WAIT);
+										ds18b20_status = DS18B20readTemperature(&(onewires.identifiers[device - 1]), ds18b20_temperature);
+									if (ds18b20_status == DS18B20_SCRATCHPAD_CRC_OK) 
+									{
+										result = COMMAND_RETURN_OK;
+										itoa(ds18b20_temperature[0], temperature, 10);
+										index = strlen(temperature);
+										temperature[index++]  = '.';
+										temperature[index++]  = (uint8_t)((((uint16_t)ds18b20_temperature[1]*625)/1000)+ASCII_ZERO);
+										temperature[index]    = 0;
+									} else
+									{
+										result = COMMAND_RETURN_DEVICE_READ_ERRO;
+									}									
+								} else {
+									result = COMMAND_RETURN_BAD_DEVICE_NUMBER;
+									}
+							} else {
+								result = COMMAND_RETURN_NO_DEVICES;
+							}
+						} else
+						{
+							result = COMMAND_RETURN_ERROR;
+						}
+					} else {
+						result = COMMAND_RETURN_ERROR;
+					}
+				
+
+					uart_putc(COMMAND_RETURN);
+					uart_puts(seed);
+					uart_putc(COMMAND_SEPARATOR);
+					uart_puts_p(result);
+					uart_putc(COMMAND_SEPARATOR);
+					uart_puts(temperature);
+					uart_puts_p(S_NL);
+				}				
 				uart_buffer[0] = 0;
 				uart_buffer_index = 0;
 			}
