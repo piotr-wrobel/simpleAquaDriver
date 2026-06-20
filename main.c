@@ -243,9 +243,9 @@ int main(void)
 					uart_putc(COMMAND_SEPARATOR);
 					itoa(przelicz_hex_na_procent(wypelnienie),napis,10);
 					uart_puts(napis);
-					uart_putc(COMMAND_SEPARATOR);
-					itoa(wypelnienie,napis,10);
-					uart_puts(napis);					
+					// uart_putc(COMMAND_SEPARATOR);
+					// itoa(wypelnienie,napis,10);
+					// uart_puts(napis);					
 					uart_puts_p(S_NL);
 				}
 				
