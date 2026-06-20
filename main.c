@@ -8,10 +8,13 @@
 #include <avr/eeprom.h>
 #include <avr/io.h>
 #include <util/delay.h>
-#include "uart/uart.h"
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 #include <string.h>
+
+#include "uart/uart.h"
+#include "1wire/dallas_one_wire.h"
+#include "1wire/ds18b20_lib.h"
 
 
 #define UART_DEBUG
