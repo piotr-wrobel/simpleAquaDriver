@@ -54,7 +54,14 @@ DALLAS_IDENTIFIER_LIST_t onewires;
 DS18B20_TEMPERATURE_t ds18b20_temperature;
 DS18B20_STATUS_t  ds18b20_status;
 uint8_t  wynik_szukania_onewire;
-uint8_t onewire_device_family, onewire_device_presence, onewire_devices;
+uint8_t onewire_device_family, onewire_device_presence;
+
+typedef struct {
+	uint8_t real_device[DALLAS_NUM_DEVICES];
+	uint8_t devices;
+} ONEWIRE_DEVICES_t;
+
+ONEWIRE_DEVICES_t onewire_d;
 
 const char COMMAND_RETURN_OK[] PROGMEM="00";
 const char COMMAND_RETURN_ERROR[] PROGMEM="01";
@@ -339,9 +346,10 @@ int main(void)
 				}
 
 				if(strcmp_P(uart_buffer_pointer, COMMAND_TMP_SEARCH) == 0){	//Komenda wyszukania czujników temperatury
+					//char temperature[10];
 					const char * result = NULL; uint8_t devices = 0;
 					wynik_szukania_onewire = dallas_search_identifiers(&onewires);
-					onewire_devices = 0;
+					onewire_d.devices = 0;
 					if( wynik_szukania_onewire == DALLAS_IDENTIFIER_DONE)
 					{
 						for(uint8_t device_number = 0; device_number < onewires.num_devices; device_number++)
@@ -349,12 +357,12 @@ int main(void)
 							onewire_device_presence = dallas_check_device_presence(&(onewires.identifiers[device_number]), &onewire_device_family);
 							if( onewire_device_presence == DALLAS_DEVICE_IS_PRESENT && onewire_device_family == ONEWIRE_DS18B20_FAMILY)
 							{
-								onewire_devices++;
+								onewire_d.devices++;
 							}				
 						}
-						if(onewire_devices > 0){
+						if(onewire_d.devices > 0){
 							result = COMMAND_RETURN_OK;
-							devices = onewire_devices + ASCII_ZERO;
+							devices = onewire_d.devices + ASCII_ZERO;
 						} else {
 							result = COMMAND_RETURN_NO_DEVICES;
 							devices = 0 + ASCII_ZERO;
@@ -387,7 +395,7 @@ int main(void)
 					{
 						uint8_t device = (uint8_t)atoi(napis);
 						wynik_szukania_onewire = dallas_search_identifiers(&onewires);
-						onewire_devices = 0;
+						onewire_d.devices = 0;
 						if( wynik_szukania_onewire == DALLAS_IDENTIFIER_DONE)
 						{
 							for(uint8_t device_number = 0; device_number < onewires.num_devices; device_number++)
@@ -395,13 +403,14 @@ int main(void)
 								onewire_device_presence = dallas_check_device_presence(&(onewires.identifiers[device_number]), &onewire_device_family);
 								if( onewire_device_presence == DALLAS_DEVICE_IS_PRESENT && onewire_device_family == ONEWIRE_DS18B20_FAMILY)
 								{
-									onewire_devices++;
+									onewire_d.devices++;
+									onewire_d.real_device[onewire_d.devices - 1] = device_number;
 								}				
 							}
-							if(onewire_devices > 0 ){
-								if(device <= onewire_devices && device > 0){
-										DS18B20convertTemperature(&(onewires.identifiers[device - 1]), DS18B20_WAIT);
-										ds18b20_status = DS18B20readTemperature(&(onewires.identifiers[device - 1]), ds18b20_temperature);
+							if(onewire_d.devices > 0 ){
+								if(device <= onewire_d.devices && device > 0){
+										DS18B20convertTemperature(&(onewires.identifiers[onewire_d.real_device[device -1]]), DS18B20_WAIT);
+										ds18b20_status = DS18B20readTemperature(&(onewires.identifiers[onewire_d.real_device[device - 1]]), ds18b20_temperature);
 									if (ds18b20_status == DS18B20_SCRATCHPAD_CRC_OK) 
 									{
 										result = COMMAND_RETURN_OK;
