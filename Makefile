@@ -42,6 +42,8 @@
 
 # MCU name
 MCU = atmega328p
+EEPROM_SAVE_BYTE = "hfuse"
+EEPROM_SAVE_BIT = 3
 
 
 # Processor frequency.
@@ -279,6 +281,7 @@ AVRDUDE_PORT = usb
 
 AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET).hex
 #AVRDUDE_WRITE_EEPROM = -U eeprom:w:$(TARGET).eep
+AVRDUDE_READ_FUSES = -U lfuse:r:-:h -U hfuse:r:-:h -U efuse:r:-:h
 
 
 # Uncomment the following if you want avrdude's erase cycle counter.
@@ -442,10 +445,43 @@ sizeafter:
 gccversion : 
 	@$(CC) --version
 
+read_fuses:
+	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_READ_FUSES)
 
+eeprom_not_erase:
+	@FUSE_BYTE=$$($(AVRDUDE) $(AVRDUDE_FLAGS) -U $(EEPROM_SAVE_BYTE):r:-:h 2>/dev/null | grep -o '0x[0-9A-Fa-f]\+'); \
+	FUSE_DEC=$$(printf "0x%02X" $$FUSE_BYTE); \
+	NEW=$$(( $$FUSE_DEC & ~(1 << $(EEPROM_SAVE_BIT)) )); \
+	NEW_FUSE=$$(printf "0x%02X" $$NEW); \
+	echo "$(EEPROM_SAVE_BYTE): $$FUSE_DEC -> $$NEW_FUSE"; \
+	if [ "$$FUSE_DEC" != "$$NEW_FUSE" ]; then \
+		echo "Zmiana wykryta - zapisuję..."; \
+		$(AVRDUDE) $(AVRDUDE_FLAGS) -U $(EEPROM_SAVE_BYTE):w:$$NEW_FUSE:m; \
+	else \
+		echo "Brak zmian - nie zapisuję"; \
+	fi
+
+eeprom_erase:
+	@FUSE_BYTE=$$($(AVRDUDE) $(AVRDUDE_FLAGS) -U $(EEPROM_SAVE_BYTE):r:-:h 2>/dev/null | grep -o '0x[0-9A-Fa-f]\+'); \
+	FUSE_DEC=$$(printf "0x%02X" $$FUSE_BYTE); \
+	NEW=$$(( $$FUSE_DEC | (1 << $(EEPROM_SAVE_BIT)) )); \
+	NEW_FUSE=$$(printf "0x%02X" $$NEW); \
+	echo "$(EEPROM_SAVE_BYTE): $$FUSE_DEC -> $$NEW_FUSE"; \
+	if [ "$$FUSE_DEC" != "$$NEW_FUSE" ]; then \
+		echo "Zmiana wykryta - zapisuję..."; \
+		$(AVRDUDE) $(AVRDUDE_FLAGS) -U $(EEPROM_SAVE_BYTE):w:$$NEW_FUSE:m; \
+	else \
+		echo "Brak zmian - nie zapisuję"; \
+	fi
 
 # Program the device.  
-program: $(TARGET).hex $(TARGET).eep
+#program: $(TARGET).hex $(TARGET).eep
+#	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) $(AVRDUDE_WRITE_EEPROM)
+
+program: eeprom_not_erase $(TARGET).hex
+	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH)
+
+program_all: eeprom_erase $(TARGET).hex $(TARGET).eep
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) $(AVRDUDE_WRITE_EEPROM)
 
 
