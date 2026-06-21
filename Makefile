@@ -82,7 +82,7 @@ OBJDIR = .
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = main.c uart/uart.c 1wire/dallas_one_wire.c 1wire/ds18b20_lib.c
+SRC = main.c uart/uart.c 1wire/dallas_one_wire.c 1wire/ds18b20_lib.c utils/fspac_lib.c
 
 
 # List C++ source files here. (C dependencies are automatically generated.)

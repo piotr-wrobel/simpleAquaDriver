@@ -15,6 +15,7 @@
 #include "uart/uart.h"
 #include "1wire/dallas_one_wire.h"
 #include "1wire/ds18b20_lib.h"
+#include "utils/fspac_lib.h"
 
 
 #define ASCII_ZERO 0x30
@@ -377,14 +378,14 @@ int main(void)
 				dopasowanie = strncmp_P(uart_buffer_pointer, COMMAND_TMP_READ, dlugosc_1);
 				if(!dopasowanie && dlugosc_2 > dlugosc_1)
 				{
-					char temperature[10];
+					char temperature[10], device_address[20] = {0};
 					strcpy(temperature, "00.0");
 					const char * result = NULL;
 					uint8_t index = 0;
 					strcpy(napis, uart_buffer_pointer + dlugosc_1);
 					if(strlen(napis) < 2)
 					{
-						int8_t device = (uint8_t)atoi(napis);
+						uint8_t device = (uint8_t)atoi(napis);
 						wynik_szukania_onewire = dallas_search_identifiers(&onewires);
 						onewire_devices = 0;
 						if( wynik_szukania_onewire == DALLAS_IDENTIFIER_DONE)
@@ -409,6 +410,7 @@ int main(void)
 										temperature[index++]  = '.';
 										temperature[index++]  = (uint8_t)((((uint16_t)ds18b20_temperature[1]*625)/1000)+ASCII_ZERO);
 										temperature[index]    = 0;
+										fspacMemToStr(onewires.identifiers[device - 1].identifier, 8, device_address);
 									} else
 									{
 										result = COMMAND_RETURN_DEVICE_READ_ERRO;
@@ -434,6 +436,8 @@ int main(void)
 					uart_puts_p(result);
 					uart_putc(COMMAND_SEPARATOR);
 					uart_puts(temperature);
+					uart_putc(COMMAND_SEPARATOR);
+					uart_puts(device_address);
 					uart_puts_p(S_NL);
 				}				
 				uart_buffer[0] = 0;
