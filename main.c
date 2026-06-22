@@ -153,7 +153,7 @@ int main(void)
   	char napis[5], seed[COMMAND_SEED_LENGTH + 1];
 	char uart_buffer[UART_BUFFER_SIZE] = "";
 	char * uart_buffer_pointer;
-	uint8_t uart_buffer_index = 0;
+	uint8_t uart_buffer_index = 0, enc_switch_prev_enabled = 0;
 	uint8_t tmp = 0, znak;
 	uint16_t uart_znak;
 	// next four instructions. // Niepotrzebne, wylaczony fuse bit CKDIV8
@@ -211,7 +211,12 @@ int main(void)
 	{
 			if(!(ENC_PIN & (1<<ENC_SWITCH)))
 			{
-				(void)zapisz_wypelnienie(wypelnienie);
+				if(!enc_switch_prev_enabled) {
+					(void)zapisz_wypelnienie(wypelnienie);
+					enc_switch_prev_enabled = 1;
+				}
+			}else {
+				enc_switch_prev_enabled = 0;
 			}
 			if(zmiana_wypelnienia)
 			{
